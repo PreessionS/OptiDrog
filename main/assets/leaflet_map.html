@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Link do zewnętrznego pliku CSS -->
+    <link rel="stylesheet" href="style.css" />
+    <script>
+        // Zarządzanie ukrywaniem batch-info podczas przewijania
+        let lastScrollTop = 0;
+        let scrollTimeout;
+
+        window.addEventListener('scroll', function () {
+            const searchContainer = document.getElementById('search-container');
+            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+            // Jeśli strona się przewija w dół (scrollTop > 0), dodaj klasę scrolling
+            if (currentScroll > 50) {
+                searchContainer.classList.add('scrolling');
+            } else {
+                searchContainer.classList.remove('scrolling');
+            }
+
+            lastScrollTop = currentScroll;
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Wspólne komponenty będą załadowane przez components.js -->
+
+    <!-- Wskaźnik ładowania -->
+    <div id="map-loading-overlay" class="map-loading-overlay">
+        <div class="map-loading-container">
+            <div class="map-loading-spinner"></div>
+            <div class="map-loading-text">Ładowanie mapy...</div>
+        </div>
+    </div>
+
+    <!-- Kontener na pole wyszukiwania i przycisk -->
+    <div id="search-container">
+        <div class="search-bcd desktop ar-wrapper">
+            <div class="hamburger-icon" id="hamburger-icon">
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="address-input" placeholder="Wyszukaj tutaj">
+                <button id="voice-button" class="voice-button" title="Rozpoznaj mowę">
+                    <span class="voice-icon">🎤</span>
+                </button>
+                <!-- Rozwijane menu dla aparatu/galerii -->
+                <div class="camera-dropdown" id="camera-dropdown">
+                    <button id="camera-button" class="camera-button" title="Opcje zdjęcia">
+                        <span class="camera-icon">📷</span>
+                    </button>
+                    <div class="camera-dropdown-menu" id="camera-dropdown-menu">
+                        <button id="camera-capture-option" class="dropdown-option">
+                            <span class="option-icon">📷</span>
+                            <span class="option-text">Zrób zdjęcie</span>
+                        </button>
+                        <button id="camera-gallery-option" class="dropdown-option">
+                            <span class="option-icon">🖼️</span>
+                            <span class="option-text">Wybierz z galerii</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="suggestions"></div>
+
+    </div>
+
+    <!-- Kontener na tabelę wyników -->
+    <h2>Dodane Adresy</h2>
+    <div class="table-container">
+        <div class="table-buttons-container" style="justify-content: space-between; gap: 8px;">
+            <button id="add-from-favorites-button" class="secondary-button" title="Dodaj z ulubionych"
+                style="min-height: 40px;">Dodaj z ulubionych</button>
+        </div>
+        <table id="address-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all-checkbox" title="Zaznacz/odznacz wszystkie"></th>
+                    <th>Adres</th>
+                    <th>Szer.</th>
+                    <th>Dł.</th>
+                    <th>Ulu.</th>
+                    <th>Ust.</th>
+                    <th class="position-header" style="display: none;">Poz</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Wiersze tabeli będą dodawane dynamicznie przez JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+
+
+    <!-- Kontener na mapę -->
+    <div id="map"></div>
+
+
+    <!-- Kontenery na wybór punktów trasy -->
+    <div id="route-selection">
+        <div class="route-point">
+            <div class="route-point-header">
+                <span class="route-point-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                </span>
+                <label for="start-point">Punkt początkowy</label>
+            </div>
+            <select id="start-point">
+                <option value="">Wybierz punkt początkowy</option>
+                <option value="current-location">Aktualna pozycja</option>
+            </select>
+        </div>
+
+        <div class="route-point">
+            <div class="route-point-header">
+                <span class="route-point-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </span>
+                <label for="end-point">Punkt końcowy</label>
+            </div>
+            <select id="end-point">
+                <option value="">Wybierz punkt końcowy</option>
+                <option value="current-location">Aktualna pozycja</option>
+            </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="route-point">
+                <div class="route-point-header">
+                    <span class="route-point-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </span>
+                    <label for="stop-time-select">Czas stopu</label>
+                </div>
+                <select id="stop-time-select">
+                    <option value="0">Brak</option>
+                    <option value="1">1 min</option>
+                    <option value="2">2 min</option>
+                    <option value="3">3 min</option>
+                    <option value="4">4 min</option>
+                    <option value="5">5 min</option>
+                    <option value="6">6 min</option>
+                    <option value="7">7 min</option>
+                    <option value="8">8 min</option>
+                    <option value="9">9 min</option>
+                    <option value="10">10 min</option>
+                </select>
+                <div id="stop-time-error" style="color: var(--error); display: none;"></div>
+            </div>
+
+            <div class="route-point">
+                <div class="route-point-header">
+                    <span class="route-point-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </span>
+                    <label for="start-time-select">Start</label>
+                </div>
+                <select id="start-time-select">
+                    <option value="">Teraz</option>
+                    <option value="06:00">06:00</option>
+                    <option value="06:30">06:30</option>
+                    <option value="07:00">07:00</option>
+                    <option value="07:30">07:30</option>
+                    <option value="08:00">08:00</option>
+                    <option value="08:30">08:30</option>
+                    <option value="09:00">09:00</option>
+                    <option value="09:30">09:30</option>
+                    <option value="10:00">10:00</option>
+                    <option value="10:30">10:30</option>
+                    <option value="11:00">11:00</option>
+                    <option value="11:30">11:30</option>
+                    <option value="12:00">12:00</option>
+                    <option value="12:30">12:30</option>
+                    <option value="13:00">13:00</option>
+                    <option value="13:30">13:30</option>
+                    <option value="14:00">14:00</option>
+                    <option value="14:30">14:30</option>
+                    <option value="15:00">15:00</option>
+                    <option value="15:30">15:30</option>
+                    <option value="16:00">16:00</option>
+                    <option value="16:30">16:30</option>
+                    <option value="17:00">17:00</option>
+                    <option value="17:30">17:30</option>
+                    <option value="18:00">18:00</option>
+                    <option value="18:30">18:30</option>
+                    <option value="19:00">19:00</option>
+                    <option value="19:30">19:30</option>
+                    <option value="20:00">20:00</option>
+                    <option value="20:30">20:30</option>
+                    <option value="21:00">21:00</option>
+                    <option value="21:30">21:30</option>
+                    <option value="22:00">22:00</option>
+                </select>
+                <div id="start-time-error" style="color: var(--error); display: none;"></div>
+            </div>
+        </div>
+
+        <button id="optimize-route" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline>
+            </svg>
+            <span>Optymalizuj trasę</span>
+        </button>
+
+        <button id="start-navigation" style="display: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            <span>Rozpocznij Nawigację</span>
+        </button>
+    </div>
+
+    <!-- Kontener z wskazówkami funkcjonalności -->
+    <div id="features-tips-container"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 22px; color: #333;">📚 Dostępne funkcje</h2>
+                <button id="close-features-tips"
+                    style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Wyszukiwanie adresów -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #2196F3; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #1565c0; margin-bottom: 6px;">🔍 Wyszukiwanie adresów</div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Wpisz adres w polu wyszukiwania. System zaproponuje podpowiedzi. Możesz też wpisać miasto i
+                        listę ulic: <i>Gdynia Morska 1 Śląska 5</i> aby dodać wiele punktów naraz.
+                    </div>
+                </div>
+
+                <!-- Skanowanie OCR -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #607D8B; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #37474F; margin-bottom: 6px;">📷 Skanowanie adresów (OCR)</div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Kliknij ikonę aparatu, aby zrobić zdjęcie listy adresów lub wybrać zrzut ekranu z galerii.
+                        Sztuczna inteligencja automatycznie wykryje i doda adresy do Twojej trasy.
+                    </div>
+                </div>
+
+                <!-- Rozpoznawanie mowy -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #4CAF50; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #2e7d32; margin-bottom: 6px;">🎤 Rozpoznawanie mowy</div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Kliknij mikrofon i dyktuj adresy. System świetnie radzi sobie z listami ulic, co przyspiesza
+                        pracę w terenie.
+                    </div>
+                </div>
+
+                <!-- Zarządzanie adresami -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #F44336; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #C62828; margin-bottom: 6px;">✏️ Edycja i Szczegóły postoju
+                    </div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Kliknij adres w tabeli, by ustawić: <b>okno czasowe</b>, <b>numer telefonu</b>, <b>typ
+                            (dostawa/odbiór)</b> lub skorzystać z <b>wyszukiwarki paczek</b> dla szybszej identyfikacji
+                        towaru.
+                    </div>
+                </div>
+
+                <!-- Optymalizacja trasy -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #FF5722; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #BF360C; margin-bottom: 6px;">🚀 Optymalizacja trasy</div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Wybierz punkt startowy i końcowy, a następnie kliknij "Optymalizuj trasę". Algorytm ułoży punkty
+                        w najkrótszej kolejności, oszczędzając Twój czas i paliwo.
+                    </div>
+                </div>
+
+                <!-- Cicha optymalizacja -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #00BCD4; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #00838F; margin-bottom: 6px;">✨ Cicha optymalizacja w locie
+                    </div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Jeśli dodasz nowy adres do już zoptymalizowanej trasy, system automatycznie uaktualni kolejność,
+                        nie przerywając Twojej pracy ekranem ładowania.
+                    </div>
+                </div>
+
+                <!-- Nawigacja -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #1976D2; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #0D47A1; margin-bottom: 6px;">🧭 Nawigacja i Pływające okno
+                    </div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Kliknij "Rozpocznij Nawigację", by otworzyć ulubioną mapę (Google, Yanosik, Waze). OptiDrog
+                        wyświetli pływające okienko z informacjami o aktualnym celu nad mapą.
+                    </div>
+                </div>
+
+                <!-- Premium -->
+                <div style="background: #f5f5f5; padding: 14px; border-left: 4px solid #FFC107; border-radius: 4px;">
+                    <div style="font-weight: 600; color: #E65100; margin-bottom: 6px;">⭐ OptiDrog Premium</div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.5;">
+                        Chcesz wyłączyć reklamy i mieć czysty interfejs? Aktywuj Premium w menu "Status konta".
+                        Wspierasz w ten sposób dalszy rozwój aplikacji!
+                    </div>
+                </div>
+            </div>
+
+            <button id="close-features-tips-bottom"
+                style="width: 100%; margin-top: 20px; padding: 12px 24px; background: #2196F3; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">Rozumiem</button>
+        </div>
+    </div>
+
+
+
+    <!-- Ładowanie wspólnych komponentów -->
+    <script src="components.js"></script>
+
+    <!-- Ładowanie bibliotek i modułów -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="js/storage_manager.js"></script>
+    <script src="route_optimizer.js"></script>
+    <script src="map_init.js"></script>
+    <script src="table_manager.js"></script>
+    <script src="address_settings_modal.js"></script>
+    <script src="address_search.js"></script>
+    <script src="navigation_manager.js"></script>
+    <script src="route_storage.js"></script>
+    <script src="status_checker.js"></script>
+    <script src="js/favorites_manager.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        // Inicjalizacja komponentów po załadowaniu DOM
+        document.addEventListener('DOMContentLoaded', function () {
+            // Pokaż wskaźnik ładowania na 3 sekundy
+            showLoadingIndicator();
+
+            // Kod inicjalizacyjny specyficzny dla strony głównej
+            // getCurrentAddressJson jest już zdefiniowana w TableManager
+
+            // StatusChecker jest już inicjalizowany w OptiDrogApp
+            console.log('Strona główna załadowana - StatusChecker będzie dostępny przez OptiDrogApp');
+
+            // Inicjalizacja FavoritesManager po załadowaniu DOM (referencje zostaną uzupełnione po starcie app.js)
+            if (window.favoritesManager) {
+                // Referencje zostaną ustawione w app.js po utworzeniu optiDrogApp
+                // Tutaj tylko podłącz przycisk gdy DOM jest gotowy
+                const favBtn = document.getElementById('add-from-favorites-button');
+                if (favBtn) {
+                    favBtn.addEventListener('click', () => window.favoritesManager.openFavoritesModal());
+                }
+            }
+        });
+
+        // Funkcja do wyświetlania wskaźnika ładowania
+        function showLoadingIndicator() {
+            const loadingOverlay = document.getElementById('map-loading-overlay');
+            if (loadingOverlay) {
+                // Pokaż wskaźnik ładowania
+                loadingOverlay.style.display = 'flex';
+
+                // Ukryj wskaźnik po 3 sekundach
+                setTimeout(function () {
+                    loadingOverlay.classList.add('fade-out');
+
+                    // Całkowicie ukryj element po zakończeniu animacji
+                    setTimeout(function () {
+                        loadingOverlay.style.display = 'none';
+                    }, 300); // Czas trwania animacji fade-out
+                }, 3500); // 3 sekundy
+            }
+        }
+
+    </script>
+
+    <!-- Inicjalizacja komponentów specyficznych dla strony głównej -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Załaduj status lokalizacji dla strony głównej
+            if (window.commonComponents) {
+                window.commonComponents.loadLocationStatus();
+            }
+
+            // Obsługa nowego przycisku hamburger w pasku wyszukiwania
+            const hamburgerIcon = document.getElementById('hamburger-icon');
+            const hamburgerButton = document.getElementById('hamburger-button');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            const closeSidebar = document.getElementById('close-sidebar');
+
+            if (hamburgerIcon && sidebar && overlay) {
+                hamburgerIcon.addEventListener('click', function () {
+                    // Otwórz menu boczne bezpośrednio
+                    sidebar.classList.add('active');
+                    overlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+
+            // Inicjalizacja wskazówek
+            initializeTips();
+        });
+
+        // Funkcja do zarządzania wskazówkami
+        function initializeTips() {
+            const closeFeaturesTipsBtn = document.getElementById('close-features-tips');
+            const closeFeaturesTipsBottomBtn = document.getElementById('close-features-tips-bottom');
+            const featuresTipsContainer = document.getElementById('features-tips-container');
+
+            if (closeFeaturesTipsBtn && featuresTipsContainer) {
+                closeFeaturesTipsBtn.addEventListener('click', function () {
+                    featuresTipsContainer.style.display = 'none';
+                });
+            }
+
+            if (closeFeaturesTipsBottomBtn && featuresTipsContainer) {
+                closeFeaturesTipsBottomBtn.addEventListener('click', function () {
+                    featuresTipsContainer.style.display = 'none';
+                });
+            }
+
+            // Zamknij wskazówki funkcji przy kliknięciu poza modalem
+            if (featuresTipsContainer) {
+                featuresTipsContainer.addEventListener('click', function (e) {
+                    if (e.target === featuresTipsContainer) {
+                        featuresTipsContainer.style.display = 'none';
+                    }
+                });
+            }
+        }
+    </script>
+    <!-- Overlay -->
+    <div id="overlay" class="overlay"></div>
+
+    <!-- Modal ustawień adresu -->
+    <div id="address-settings-modal" class="address-settings-modal">
+        <div class="address-settings-content">
+            <!-- Nagłówek modala -->
+            <div class="address-settings-header">
+                <button class="address-settings-close" id="address-settings-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <h2 class="address-settings-title">Edytuj postój</h2>
+                <button class="address-settings-ready" id="address-settings-ready">Gotowe</button>
+            </div>
+
+            <!-- Informacje o adresie -->
+            <div class="address-settings-info">
+                <div class="address-settings-location">
+                    <div class="location-icon">📍</div>
+                    <div class="location-details">
+                        <div class="location-name" id="modal-address-name">Morska 205, Gdynia</div>
+                        <div class="location-subtitle" id="modal-address-subtitle">Powiat Gdynia, 81-222</div>
+                    </div>
+                </div>
+
+                <div class="address-settings-notes">
+                    <span class="notes-label">Dodaj notatki</span>
+                    <button class="notes-camera">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                                stroke="currentColor" stroke-width="2" />
+                            <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Opcje ustawień -->
+            <div class="address-settings-options">
+                <!-- Numer telefonu -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Numer telefonu</div>
+                        <input type="tel" id="address-phone" class="phone-input" placeholder="Wprowadź numer telefonu"
+                            pattern="[0-9]*" maxlength="15">
+                    </div>
+                </div>
+
+                <!-- Wyszukiwarka paczek -->
+                <div class="setting-item clickable" id="package-search-setting">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                                stroke="currentColor" stroke-width="2" />
+                            <polyline points="3.27,6.96 12,12.01 20.73,6.96" stroke="currentColor" stroke-width="2" />
+                            <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Wyszukiwarka paczek</div>
+                        <div class="setting-value" id="package-search-value">Nie ustawiono</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>
+
+                <!-- Paczki -->
+                <!--<div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 3h18v18H3zM9 9h6v6H9z" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Paczki</div>
+                        <div class="setting-counter">
+                            <button class="counter-btn" id="packages-minus">−</button>
+                            <span class="counter-value" id="packages-count">1</span>
+                            <button class="counter-btn" id="packages-plus">+</button>
+                        </div>
+                    </div>
+                </div>-->
+
+                <!-- Kolejność -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Kolejność</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn" id="tab-first">Pierw.</button>
+                            <button class="tab-btn active" id="tab-auto">Auto.</button>
+                            <button class="tab-btn" id="tab-last">Ostatni</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typ -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Typ</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn active" id="tab-delivery">Dostawa</button>
+                            <button class="tab-btn" id="tab-pickup">Odbiór</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Czas przyjazdu -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Czas przyjazdu</div>
+                        <div class="setting-value">W dowolnym czasie</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>
+
+                <!-- Czas na postoju -->
+                <!--<div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Czas na postoju</div>
+                        <div class="setting-value">Domyślny (1 min)</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>-->
+
+                <!-- Zmień adres -->
+                <!--<div class="setting-item clickable" id="change-address">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Zmień adres</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>-->
+
+                <!-- Duplikuj postój -->
+                <!--<div class="setting-item clickable" id="duplicate-stop">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Duplikuj postój</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>-->
+
+                <!-- Usuń postój -->
+                <!--<div class="setting-item clickable delete-item" id="delete-stop">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2"/>
+                            <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Usuń postój</div>
+                    </div>
+                    <div class="setting-arrow">›</div>
+                </div>-->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ustawień paczki -->
+    <div id="package-settings-modal" class="address-settings-modal">
+        <div class="address-settings-content">
+            <!-- Nagłówek modala -->
+            <div class="address-settings-header">
+                <button class="address-settings-close" id="package-settings-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <h2 class="address-settings-title">Wyszukiwarka paczek</h2>
+                <div class="header-buttons">
+                    <button class="address-settings-clear" id="package-settings-clear">Wyczyść</button>
+                    <button class="address-settings-ready" id="package-settings-ready">Gotowe</button>
+                </div>
+            </div>
+
+            <!-- Informacje o adresie -->
+            <div class="address-settings-info">
+                <div class="address-settings-location">
+                    <div class="location-icon">📦</div>
+                    <div class="location-details">
+                        <div class="location-name" id="package-modal-address-name">Identyfikator postoju</div>
+                        <div class="location-subtitle" id="package-modal-address-subtitle">ID 3</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opcje ustawień paczki -->
+            <div class="address-settings-options">
+                <!-- Opis paczki -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor"
+                                stroke-width="2" />
+                            <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" />
+                            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" />
+                            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" />
+                            <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Opis paczki</div>
+                    </div>
+                </div>
+
+                <!-- Rozmiar paczki -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Rozmiar paczki</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn active" id="package-size-small">Mała</button>
+                            <button class="tab-btn" id="package-size-medium">Średnia</button>
+                            <button class="tab-btn" id="package-size-large">Duża</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typ paczki -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor"
+                                stroke-width="2" />
+                            <rect x="9" y="9" width="6" height="6" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Typ paczki</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn" id="package-type-box">Pudełko</button>
+                            <button class="tab-btn active" id="package-type-bag">Worek</button>
+                            <button class="tab-btn" id="package-type-letter">List</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Miejsce w pojeździe -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" stroke="currentColor" stroke-width="2" />
+                            <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" stroke="currentColor" stroke-width="2" />
+                            <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Miejsce w pojeździe</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn" id="vehicle-position-front">Przód</button>
+                            <button class="tab-btn" id="vehicle-position-middle">Środek</button>
+                            <button class="tab-btn" id="vehicle-position-back">Tył</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strona pojazdu -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="6" width="18" height="12" rx="2" ry="2" stroke="currentColor"
+                                stroke-width="2" />
+                            <circle cx="8" cy="12" r="2" stroke="currentColor" stroke-width="2" />
+                            <circle cx="16" cy="12" r="2" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Strona pojazdu</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn active" id="vehicle-side-left">Lewa strona</button>
+                            <button class="tab-btn" id="vehicle-side-right">Prawa strona</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Podłoga -->
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="2" y="4" width="20" height="16" rx="2" ry="2" stroke="currentColor"
+                                stroke-width="2" />
+                            <path d="M6 8h12M6 12h12M6 16h12" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-label">Podłoga</div>
+                        <div class="setting-tabs">
+                            <button class="tab-btn" id="floor-ground">Podłoga</button>
+                            <button class="tab-btn active" id="floor-shelf">Półka</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal szczegółów trasy (informacje + zapis) -->
+    <div id="route-details-modal" class="address-settings-modal centered-modal">
+        <div class="address-settings-content">
+            <div class="address-settings-header">
+                <button class="address-settings-close" id="route-details-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <h2 class="address-settings-title">Szczegóły trasy</h2>
+                <button class="address-settings-ready" id="route-details-ready">Zamknij</button>
+            </div>
+
+            <div class="address-settings-options">
+                <!-- Informacje o trasie -->
+                <div id="route-info" style="display: none; padding: 15px;">
+                    <h3 style="margin-top: 0; color: var(--accent);">Statystyki trasy</h3>
+                    <div class="route-stats">
+                        <div class="stat-item"
+                            style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-light);">
+                            <span class="stat-label">Całkowita długość:</span>
+                            <span id="total-distance" class="stat-value"
+                                style="font-weight: 600; color: var(--text-primary);">-</span>
+                        </div>
+                        <div class="stat-item"
+                            style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-light);">
+                            <span class="stat-label">Liczba punktów:</span>
+                            <span id="route-points" class="stat-value"
+                                style="font-weight: 600; color: var(--text-primary);">-</span>
+                        </div>
+                        <div class="stat-item" style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span class="stat-label">Szacunkowy czas przejechania:</span>
+                            <span id="estimated-travel-time" class="stat-value"
+                                style="font-weight: 600; color: var(--text-primary);">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="height: 1px; background: var(--border); margin: 10px 15px;"></div>
+
+                <!-- Zapisywanie trasy -->
+                <div id="save-route-container" style="display: none; padding: 15px;">
+                    <h3 style="margin-top: 0; color: var(--accent);">Zapisz trasę</h3>
+                    <div class="save-route-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="route-name-input" placeholder="Wprowadź nazwę trasy" maxlength="50"
+                            style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                        <button id="save-route-button"
+                            style="padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            Zapisz trasę
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicjalizacja modala szczegółów trasy
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('route-details-modal');
+            const closeBtn = document.getElementById('route-details-close');
+            const readyBtn = document.getElementById('route-details-ready');
+
+            if (modal && closeBtn && readyBtn) {
+                const closeModal = () => {
+                    modal.classList.remove('active');
+                    const overlay = document.getElementById('overlay');
+                    if (overlay) overlay.classList.remove('active');
+                };
+
+                closeBtn.addEventListener('click', closeModal);
+                readyBtn.addEventListener('click', closeModal);
+
+                // Zamknij po kliknięciu poza modal
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+            }
+        });
+
+        // Globalna funkca do otwierania modala szczegółów trasy
+        window.openRouteDetailsModal = function () {
+            const modal = document.getElementById('route-details-modal');
+            const overlay = document.getElementById('overlay');
+            if (modal && overlay) {
+                modal.classList.add('active');
+                overlay.classList.add('active');
+            }
+        };
+    </script>
+</body>
+
+</html>
