@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <title>Pomoc - OptiDrog</title>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Dedykowane style dla nowoczesnej strony pomocy */
+        :root {
+            --help-primary: var(--accent, #1a73e8);
+            --help-bg: var(--background, #f8f9fa);
+            --help-surface: var(--surface, #ffffff);
+            --help-text: var(--text-primary, #202124);
+            --help-text-sec: var(--text-secondary, #5f6368);
+            --help-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --help-radius: 16px;
+        }
+
+        body {
+            background-color: var(--help-bg);
+            color: var(--help-text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .help-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: calc(16px + var(--top-bar-height, 0px)) 16px calc(32px + var(--bottom-bar-height, 0px));
+        }
+
+        /* Hero Section */
+        .help-hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--help-primary) 0%, #4285f4 100%);
+            border-radius: var(--help-radius);
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(26, 115, 232, 0.2);
+        }
+
+        .help-hero h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .help-hero p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        /* Search Bar */
+        .search-container {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            margin-bottom: 24px;
+        }
+
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            background: var(--help-surface);
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border, #dadce0);
+        }
+
+        .search-icon {
+            margin-right: 12px;
+            color: var(--help-text-sec);
+        }
+
+        #help-search {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 16px;
+            color: var(--help-text);
+            outline: none;
+        }
+
+        /* Help Cards & Sections */
+        .help-card {
+            background: var(--help-surface);
+            border-radius: var(--help-radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--help-card-shadow);
+            border: 1px solid var(--border, #dadce0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .help-card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .help-card h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: var(--help-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .help-card h2 span {
+            font-size: 24px;
+        }
+
+        /* Expandable Sections (Accordion) */
+        .accordion-item {
+            border-bottom: 1px solid var(--border-light, #f1f3f4);
+        }
+
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+
+        .accordion-header {
+            padding: 16px 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .accordion-header:hover {
+            color: var(--help-primary);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease;
+            padding: 0;
+            color: var(--help-text-sec);
+            font-size: 15px;
+        }
+
+        .accordion-item.active .accordion-content {
+            max-height: 1000px;
+            padding-bottom: 16px;
+        }
+
+        .accordion-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-item.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Grid for features */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            background: var(--surface-light, #f8f9fa);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+        }
+
+        .feature-item h3 {
+            margin-top: 0;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--help-text);
+        }
+
+        .feature-item p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--help-text-sec);
+        }
+
+        /* Requirement Alert */
+        .requirement-card {
+            background: rgba(217, 48, 37, 0.05);
+            border-left: 5px solid var(--error, #d93025);
+        }
+
+        .requirement-card h2 {
+            color: var(--error);
+        }
+
+        .requirements-list {
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .requirements-list li {
+            margin-bottom: 8px;
+        }
+
+        /* Tips and Tricks */
+        .tip-box {
+            background: rgba(251, 188, 4, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 10px;
+            font-size: 14px;
+            border-left: 4px solid var(--warning, #f29900);
+        }
+
+        .code-example {
+            background: #2d2e30;
+            color: #8ab4f8;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .help-card {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        /* Search highlight */
+        .highlight {
+            background-color: rgba(255, 235, 59, 0.3);
+            border-radius: 2px;
+            font-weight: bold;
+        }
+
+        /* Dark Mode adjustments */
+        [data-theme="dark"] .search-wrapper {
+            background: #2d2e30;
+            border-color: #3c4043;
+        }
+
+        [data-theme="dark"] .feature-item {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        [data-theme="dark"] .requirement-card {
+            background: rgba(217, 48, 37, 0.1);
+        }
+
+        [data-theme="dark"] .tip-box {
+            background: rgba(251, 188, 4, 0.15);
+            color: #ffca28;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="help-wrapper">
+        <!-- Hero Section -->
+        <header class="help-hero">
+            <h1>OptiDrog</h1>
+            <p>Centrum Pomocy i Przewodnik</p>
+        </header>
+
+        <!-- 1. Wymagania -->
+        <section class="help-card requirement-card searchable">
+            <h2><span>⚠️</span> Wymagania systemowe</h2>
+            <p>Aby OptiDrog działał prawidłowo, upewnij się, że przyznałeś następujące uprawnienia:</p>
+            <ul class="requirements-list">
+                <li><strong>📍 Lokalizacja GPS:</strong> Niezbędna do nawigacji i optymalizacji.</li>
+                <li><strong>🌐 Internet:</strong> Wymagany do pobierania map i wyszukiwania adresów.</li>
+                <li><strong>🔝 Wyświetlanie nad aplikacjami:</strong> Pozwala na działanie pływającego okienka podczas
+                    korzystania z nawigacji.</li>
+                <li><strong>📷 Aparat i Galeria:</strong> Niezbędne do funkcji skanowania adresów OCR i dodawania zdjęć
+                    do postojów.</li>
+            </ul>
+        </section>
+
+        <!-- 2. Pierwsze kroki -->
+        <section class="help-card searchable">
+            <h2><span>🧭</span> Pierwsze kroki</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Zarządzanie adresami
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Wpisz adres w polu na górze ekranu i wybierz sugerowaną pozycję. Adres pojawi się w tabeli
+                            poniżej. Możesz go usunąć, oznaczyć jako ulubiony lub zmienić jego parametry w ustawieniach
+                            (ikona ⚙️).</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Optymalizacja trasy
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Aby zoptymalizować trasę, wybierz punkt początkowy oraz punkt końcowy, a następnie kliknij
+                            <b>"Optymalizuj trasę"</b>. Aplikacja ułoży punkty w najkrótszej możliwej kolejności.
+                        </p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Nawigacja i pływające okienko
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Po zoptymalizowaniu trasy kliknij <b>"Rozpocznij nawigację"</b>. OptiDrog otworzy Twoją
+                            ulubioną nawigację i wyświetli pływające okienko z informacjami o aktualnym celu.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Funkcje Zaawansowane -->
+        <section class="help-card searchable">
+            <h2><span>🚀</span> Zaawansowane funkcje</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h3>📦 Hurtowe dodawanie</h3>
+                    <p>Dodaj wiele adresów naraz wpisując listę ulic oddzielonych spacją.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>📷 Skanowanie OCR</h3>
+                    <p>Rób zdjęcia listom przewozowym lub wybieraj zrzuty ekranu z galerii, by szybko dodać adresy.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🔍 Wyszukiwarka paczek</h3>
+                    <p>Łatwo identyfikuj paczki na każdym postoju dzięki dedykowanemu polu wyszukiwania.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>⏱️ Okna czasowe</h3>
+                    <p>Ustaw godziny "od-do" dla każdego adresu, a algorytm zaplanuje dotarcie na czas.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🔄 Adresy na powrocie</h3>
+                    <p>Oznacz adresy jako "Ostatni", aby odwiedzić je dopiero w drodze powrotnej do bazy.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>📝 Notatki i Zdjęcia</h3>
+                    <p>Dodawaj instrukcje, numery telefonów i zdjęcia dla każdego punktu na trasie.</p>
+                </div>
+                <div class="feature-item">
+                    <h3>✨ Cicha optymalizacja</h3>
+                    <p>Dodaj nowy adres, gdy trasa jest już zoptymalizowana – aplikacja automatycznie wplecie go w
+                        najlepsze miejsce bez przerywania pracy.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Skanowanie i Dodawanie -->
+        <section class="help-card searchable">
+            <h2><span>📷</span> Skanowanie i Hurtowe dodawanie</h2>
+            <p>Aplikacja oferuje potężne narzędzia do szybkiego wprowadzania danych:</p>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Skanowanie OCR (ML Kit)
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Kliknij ikonę aparatu obok pola wyszukiwania. Możesz zrobić zdjęcie fizycznej listy adresów
+                            lub wybrać zrzut ekranu z innej aplikacji z galerii. Sztuczna inteligencja rozpozna adresy,
+                            które będziesz mógł zatwierdzić jednym kliknięciem.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Hurtowe wpisywanie
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Wpisz miasto, a po nim listę ulic z numerami: <br><code class="code-example"
+                                style="display:inline-block">Gdynia Morska 15 Kwiatowa 2 Śląska 10</code><br>Aplikacja
+                            automatycznie wyszuka i doda wszystkie wymienione punkty.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Ustawienia i motywy -->
+        <section class="help-card searchable">
+            <h2><span>⚙️</span> Personalizacja</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Wybór nawigacji
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>W ustawieniach możesz wybrać domyślną aplikację nawigacyjną: Google Maps, Yanosik, Waze,
+                            HERE, OsmAnd lub Mapy.cz.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Motyw Dark/Light
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Aplikacja wspiera motyw ciemny, jasny oraz automatyczny (zsynchronizowany z systemem
+                            Android).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Rozwiązywanie problemów -->
+        <section class="help-card searchable">
+            <h2><span>🔧</span> Masz problem?</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        GPS nie znajduje pozycji
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Upewnij się, że masz włączony GPS w telefonie i udzieliłeś uprawnień aplikacji. Wyjście na
+                            otwartą przestrzeń przyspieszy znalezienie sygnału.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Nie działa skanowanie aparatem
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Sprawdź, czy aplikacja ma uprawnienia do aparatu. Funkcja najlepiej działa na wyraźnym
+                            tekście w dobrym oświetleniu.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        Pływające okienko nie widać
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Android blokuje to okienko bez specjalnego uprawnienia. Wejdź w <i>Ustawienia -> Aplikacje ->
+                                OptiDrog -> Wyświetlaj nad innymi aplikacjami</i> i włącz tę opcję.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Premium -->
+        <section class="help-card searchable">
+            <h2><span>⭐</span> OptiDrog Premium</h2>
+            <p>Odblokuj pełny potencjał aplikacji i wesprzyj rozwój projektu:</p>
+            <ul class="requirements-list">
+                <li><strong>🚫 Brak reklam:</strong> Korzystaj z aplikacji bez przerw na reklamy wideo i banery.</li>
+                <li><strong>🚀 Priorytetowe wsparcie:</strong> Twoje sugestie i zgłoszenia będą traktowane priorytetowo.
+                </li>
+                <li><strong>💼 Profesjonalny wizerunek:</strong> Czysty interfejs bez rozpraszaczy dla kurierów i
+                    kierowców.</li>
+            </ul>
+            <p>Zarządzaj subskrypcją bezpośrednio w menu <b>"Status konta"</b> lub w Sklepie Play.</p>
+        </section>
+
+        <!-- 7. Wskazówki -->
+        <section class="help-card searchable">
+            <h2><span>💡</span> Pro-tipy</h2>
+            <div class="tip-box">
+                <b>Zapisuj trasy:</b> Jeśli codziennie jeździsz w te same miejsca, zapisz trasę w sekcji "Moje trasy",
+                aby móc ją wczytać jednym kliknięciem.
+            </div>
+            <div class="tip-box" style="margin-top: 15px;">
+                <b>Adresy powrotne:</b> Idealne dla kurierów wracających do bazy z paczkami do zwrotu.
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="components.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Accordion Logic
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.parentElement;
+                    const isActive = item.classList.contains('active');
+
+                    // Close all other items in the same accordion
+                    const accordion = item.parentElement;
+                    accordion.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('active'));
+
+                    if (!isActive) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+
+            // 2. Search Logic
+            const searchInput = document.getElementById('help-search');
+            const cards = document.querySelectorAll('.searchable');
+
+            searchInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase().trim();
+
+                cards.forEach(card => {
+                    const text = card.innerText.toLowerCase();
+                    if (query === '' || text.includes(query)) {
+                        card.style.display = 'block';
+                        card.style.animation = 'fadeIn 0.3s ease forwards';
+
+                        // If searching, open accordions that contain matching text
+                        if (query !== '') {
+                            const accordionItems = card.querySelectorAll('.accordion-item');
+                            accordionItems.forEach(item => {
+                                if (item.innerText.toLowerCase().includes(query)) {
+                                    item.classList.add('active');
+                                } else {
+                                    item.classList.remove('active');
+                                }
+                            });
+                        } else {
+                            // Reset accordions when clearing search
+                            card.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('active'));
+                        }
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+
+            // 3. Theme application (via components.js fallback)
+            if (window.commonComponents) {
+                window.commonComponents.loadSavedTheme();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

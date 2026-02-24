@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="72dp"
+    android:layout_height="72dp"
+    android:background="@drawable/circle_background"
+    android:elevation="8dp">
+
+    <!-- Ikona nawigacji w górnej części -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="8dp"
+        android:text="📍"
+        android:textSize="14sp" />
+
+    <!-- Odległość w centrum -->
+    <TextView
+        android:id="@+id/minimized_distance_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="4dp"
+        android:text="0 m"
+        android:textColor="@color/text_primary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:shadowColor="@color/dark_primary"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2" />
+</FrameLayout>
